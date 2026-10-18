@@ -1,0 +1,12 @@
+services:
+  bank:
+    build: .
+    stdin_open: true
+    tty: true
+    environment:
+      BANK_DB_PATH: /data/bank.db
+    volumes:
+      - bank-data:/data
+
+volumes:
+  bank-data:
