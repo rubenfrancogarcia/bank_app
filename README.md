@@ -28,9 +28,49 @@ an error.
 
 ## Command-Line Application
 
-The final project should be structured as outlined in the assignment and be
-executable from the command line. It should accept user input and return
-results in the command line.
+The application runs from the command line:
+
+```text
+python main.py
+```
+
+It stores account records in SQLite (`bank.db` by default). The tables are
+initialized from [`schema.sql`](./bank/repositories/schema.sql). Set
+`BANK_DB_PATH` to use another database file. The CLI supports:
+
+- `user-create "Alex" "Example" "alex@example.com"`
+- `user-list`
+- `user-info <user_id>` (show the profile, accounts, cards, and loans)
+- `create <user_id> <checking|savings>`
+- `create checking "Alex Example"` (creates a user and account together)
+- `list`
+- `balance <account_id>`
+- `deposit <account_id> <amount>`
+- `withdraw <account_id> <amount>`
+- `card-create <account_id> <credit_limit>`
+- `card-list`, `card-balance <card_id>`
+- `card-charge <card_id> <amount>`, `card-pay <card_id> <amount>`
+- `loan-create <account_id> <principal> <annual_rate_percent> <term_months>`
+- `loan-list`, `loan-balance <loan_id>`, `loan-pay <loan_id> <amount>`
+- `help` and `exit`
+
+Users own accounts, and accounts fund their linked cards and loans. Both
+product models extend `FinancialProduct`, which provides a `user_id` and
+`product_id`; each retains its own card or loan behavior and database table.
+Card charges cannot exceed the credit limit; card payments debit the linked
+account. Creating a loan deposits its principal into the linked account, and
+loan payments debit it.
+Loan payments apply one monthly interest period per payment, using the APR and
+remaining term to calculate the installment. This command-line app does not
+track calendar due dates or late fees.
+
+When the app opens an older database, it adds user links and creates user
+records from existing account owner names. Those migrated users have no email
+address.
+
+Amounts must be positive and have no more than two decimal places. Withdrawals
+and product payments cannot exceed the linked account's balance. Customer
+Employee records are not yet implemented.
 
 ## Object-Oriented Example
 

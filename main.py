@@ -1,3 +1,5 @@
+"""Start the bank command-line application."""
+
 from bank.cli import main
 
 
