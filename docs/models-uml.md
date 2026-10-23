@@ -7,6 +7,7 @@ classDiagram
         +str first_name
         +str last_name
         +str email
+        +str role
         +str full_name
     }
 
@@ -58,6 +59,6 @@ classDiagram
     Account "1" --> "0..*" FinancialProduct : funds
 ```
 
-`Customer` and `Employee` currently inherit the fields and behavior of `User`
-without adding their own. Product IDs are assigned independently by the credit
-card and loan tables, so the same numeric ID can identify one of each.
+`Customer` and `Employee` inherit the user fields and set the user's role.
+Product IDs are assigned independently by the credit card and loan tables, so
+the same numeric ID can identify one of each.
