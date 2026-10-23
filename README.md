@@ -41,6 +41,8 @@ initialized from [`schema.sql`](./bank/repositories/schema.sql). Set
 - `user-create "Alex" "Example" "alex@example.com"`
 - `user-list`
 - `user-info <user_id>` (show the profile, accounts, cards, and loans)
+- `employee-create "Jamie" "Employee" "jamie@example.com"`
+- `employee-list`
 - `create <user_id> <checking|savings>`
 - `create checking "Alex Example"` (creates a user and account together)
 - `list`
@@ -54,7 +56,8 @@ initialized from [`schema.sql`](./bank/repositories/schema.sql). Set
 - `loan-list`, `loan-balance <loan_id>`, `loan-pay <loan_id> <amount>`
 - `help` and `exit`
 
-Users own accounts, and accounts fund their linked cards and loans. Both
+Users can be registered as customers or employees; `employee-list` shows
+bank employees. Users own accounts, and accounts fund their linked cards and loans. Both
 product models extend `FinancialProduct`, which provides a `user_id` and
 `product_id`; each retains its own card or loan behavior and database table.
 Card charges cannot exceed the credit limit; card payments debit the linked
@@ -69,8 +72,7 @@ records from existing account owner names. Those migrated users have no email
 address.
 
 Amounts must be positive and have no more than two decimal places. Withdrawals
-and product payments cannot exceed the linked account's balance. Customer
-Employee records are not yet implemented.
+and product payments cannot exceed the linked account's balance.
 
 ## Object-Oriented Example
 

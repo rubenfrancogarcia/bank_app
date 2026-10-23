@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from bank.cli import main
 from bank.models.account import Account
+from bank.models.employee import Employee
 from bank.models.financial_product import FinancialProduct
 from bank.models.user import User
 from bank.repositories.account_repository import AccountRepository
@@ -20,6 +21,7 @@ from bank.repositories.loan_repository import LoanRepository
 from bank.repositories.user_repository import UserRepository
 from bank.services.account_service import AccountService
 from bank.services.credit_service import CreditService
+from bank.services.employee_service import EmployeeService
 from bank.services.loan_service import LoanService
 from bank.services.user_service import UserService
 from bank.utils.bank_exception import BankException
@@ -33,6 +35,7 @@ class AccountTests(unittest.TestCase):
         self.connection = sqlite3.connect(":memory:")
         initialize_database(self.connection)
         self.users = UserRepository(self.connection)
+        self.employee_service = EmployeeService(self.users)
         self.accounts = AccountRepository(self.connection)
         self.cards = CreditCardRepository(self.connection)
         self.loans = LoanRepository(self.connection)
@@ -69,6 +72,24 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(user.last_name, "Smith")
         self.assertEqual(user.email, "alexandra@example.com")
 
+    def test_employee_creation_and_listing_only_returns_employees(
+        self,
+    ) -> None:
+        """Check employees are persisted separately from customers."""
+        self.user_service.create_user("Alex", "Customer")
+        employee = self.employee_service.create_employee(
+            "Jamie", "Employee", "jamie@example.com"
+        )
+
+        employees = self.employee_service.list_employees()
+        stored_employee = self.users.get(employee.user_id)
+
+        self.assertEqual(len(employees), 1)
+        self.assertIsInstance(employees[0], Employee)
+        self.assertEqual(employees[0].full_name, "Jamie Employee")
+        self.assertEqual(employees[0].role, "employee")
+        self.assertIsInstance(stored_employee, Employee)
+
     def test_products_share_user_and_product_ids(self) -> None:
         """Check loans and cards use the shared product identity."""
         account = self.create_account()
@@ -102,7 +123,7 @@ class AccountTests(unittest.TestCase):
         )
 
     def test_user_details_include_only_the_users_records(self) -> None:
-        """Show the user's accounts, cards, and loans without other users' data."""
+        """Show one user's accounts, cards, and loans."""
         account = self.create_account()
         self.service.deposit(account.account_id, Decimal("100.00"))
         card = self.credit_service.create_card(
@@ -193,6 +214,34 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(user.full_name, "Alex Example")
         self.assertEqual(card.user_id, user.user_id)
         self.assertEqual(loan.user_id, user.user_id)
+        legacy.close()
+
+    def test_migrates_existing_user_table_to_customer_roles(self) -> None:
+        """Treat existing untyped users as customers after migration."""
+        legacy = sqlite3.connect(":memory:")
+        legacy.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                email TEXT
+            )
+            """
+        )
+        legacy.execute(
+            """
+            INSERT INTO users (first_name, last_name, email)
+            VALUES ('Alex', 'Example', 'alex@example.com')
+            """
+        )
+        legacy.commit()
+
+        initialize_database(legacy)
+
+        user = UserRepository(legacy).get(1)
+        self.assertEqual(user.role, "customer")
+        self.assertNotIsInstance(user, Employee)
         legacy.close()
 
     def test_create_deposit_and_withdraw_account(self) -> None:
@@ -338,6 +387,8 @@ class AccountTests(unittest.TestCase):
             database_path = os.path.join(directory, "bank.db")
             commands = [
                 'user-create "Alex" "Example" "alex@example.com"',
+                'employee-create "Jamie" "Employee" "jamie@example.com"',
+                "employee-list",
                 "create 1 checking",
                 'create savings "Jamie Doe"',
                 "deposit 1 10.50",
@@ -362,6 +413,12 @@ class AccountTests(unittest.TestCase):
                 "Created account: #1 Alex Example", output.getvalue()
             )
             self.assertIn("Created user #1: Alex Example", output.getvalue())
+            self.assertIn(
+                "Created employee #2: Jamie Employee", output.getvalue()
+            )
+            self.assertIn(
+                "#2 Jamie Employee (jamie@example.com)", output.getvalue()
+            )
             self.assertIn("Created account: #2 Jamie Doe", output.getvalue())
             self.assertIn("New balance: 10.50", output.getvalue())
             self.assertIn("balance: 10.50", output.getvalue())

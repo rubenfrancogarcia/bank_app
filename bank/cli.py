@@ -14,6 +14,7 @@ from bank.repositories.loan_repository import LoanRepository
 from bank.repositories.user_repository import UserRepository
 from bank.services.account_service import AccountService
 from bank.services.credit_service import CreditService
+from bank.services.employee_service import EmployeeService
 from bank.services.loan_service import LoanService
 from bank.services.user_service import UserService
 from bank.utils.bank_exception import BankException
@@ -81,6 +82,7 @@ def _run_command(
     credit_service: CreditService,
     loan_service: LoanService,
     user_service: UserService,
+    employee_service: EmployeeService,
     command: str,
 ) -> bool:
     try:
@@ -104,6 +106,8 @@ def _run_command(
             '  user-create "<first name>" "<last name>" "<email>"\n'
             "  user-list\n"
             "  user-info <user_id>\n"
+            '  employee-create "<first name>" "<last name>" "<email>"\n'
+            "  employee-list\n"
             "  list\n"
             "  balance <account_id>\n"
             "  deposit <account_id> <amount>\n"
@@ -136,7 +140,27 @@ def _run_command(
             else:
                 for user in users:
                     email = user.email or "no email"
-                    print(f"#{user.user_id} {user.full_name} ({email})")
+                    print(
+                        f"#{user.user_id} {user.full_name} "
+                        f"[{user.role}] ({email})"
+                    )
+        elif action == "employee-create" and len(arguments) == 3:
+            employee = employee_service.create_employee(*arguments)
+            print(
+                f"Created employee #{employee.user_id}: "
+                f"{employee.full_name}"
+            )
+        elif action == "employee-list" and not arguments:
+            employees = employee_service.list_employees()
+            if not employees:
+                print("No employees found.")
+            else:
+                for employee in employees:
+                    email = employee.email or "no email"
+                    print(
+                        f"#{employee.user_id} "
+                        f"{employee.full_name} ({email})"
+                    )
         elif action == "user-info" and len(arguments) == 1:
             details = user_service.get_user_details(
                 _parse_positive_int(arguments[0], "User ID")
@@ -144,6 +168,7 @@ def _run_command(
             user = details.user
             print(f"User #{user.user_id}: {user.full_name}")
             print(f"Email: {user.email or 'not provided'}")
+            print(f"Role: {user.role}")
 
             print("Accounts:")
             if details.accounts:
@@ -273,6 +298,7 @@ def main() -> None:
     with closing(connect()) as connection:
         initialize_database(connection)
         users = UserRepository(connection)
+        employee_service = EmployeeService(users)
         accounts = AccountRepository(connection)
         cards = CreditCardRepository(connection)
         loans = LoanRepository(connection)
@@ -292,6 +318,11 @@ def main() -> None:
                 print()
                 break
             if not _run_command(
-                service, credit_service, loan_service, user_service, command
+                service,
+                credit_service,
+                loan_service,
+                user_service,
+                employee_service,
+                command,
             ):
                 break
