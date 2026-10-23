@@ -20,7 +20,20 @@ def initialize_database(connection: sqlite3.Connection) -> None:
     with connection:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.executescript(schema)
+        _add_user_role(connection)
         _add_user_links(connection)
+
+
+def _add_user_role(connection: sqlite3.Connection) -> None:
+    """Add customer roles to user tables created by older versions."""
+    if "role" not in _column_names(connection, "users"):
+        connection.execute(
+            """
+            ALTER TABLE users
+            ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'
+                CHECK (role IN ('customer', 'employee'))
+            """
+        )
 
 
 def _add_user_links(connection: sqlite3.Connection) -> None:

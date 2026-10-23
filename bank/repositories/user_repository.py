@@ -1,7 +1,9 @@
 """SQLite storage operations for users."""
 
 import sqlite3
+from typing import Literal
 
+from bank.models.employee import Employee
 from bank.models.user import User
 
 
@@ -21,10 +23,10 @@ class UserRepository:
         """Insert a user and assign its database ID."""
         cursor = self._connection.execute(
             """
-            INSERT INTO users (first_name, last_name, email)
-            VALUES (?, ?, ?)
+            INSERT INTO users (first_name, last_name, email, role)
+            VALUES (?, ?, ?, ?)
             """,
-            (user.first_name, user.last_name, user.email),
+            (user.first_name, user.last_name, user.email, user.role),
         )
         if cursor.lastrowid is None:
             raise RuntimeError("SQLite did not return a user ID.")
@@ -35,7 +37,7 @@ class UserRepository:
         """Return a user by ID, or None if it does not exist."""
         row = self._connection.execute(
             """
-            SELECT id, first_name, last_name, email
+            SELECT id, first_name, last_name, email, role
             FROM users
             WHERE id = ?
             """,
@@ -49,17 +51,41 @@ class UserRepository:
         """Return all users in ID order."""
         rows = self._connection.execute(
             """
-            SELECT id, first_name, last_name, email
+            SELECT id, first_name, last_name, email, role
             FROM users
             ORDER BY id
             """
         ).fetchall()
         return [self._from_row(row) for row in rows]
 
+    def list_by_role(
+        self, role: Literal["customer", "employee"]
+    ) -> list[User]:
+        """Return users with the requested role."""
+        rows = self._connection.execute(
+            """
+            SELECT id, first_name, last_name, email, role
+            FROM users
+            WHERE role = ?
+            ORDER BY id
+            """,
+            (role,),
+        ).fetchall()
+        return [self._from_row(row) for row in rows]
+
     @staticmethod
-    def _from_row(row: tuple[int, str, str, str | None]) -> User:
+    def _from_row(
+        row: tuple[int, str, str, str | None, str]
+    ) -> User:
         """Build a user from a database row."""
-        user_id, first_name, last_name, email = row
+        user_id, first_name, last_name, email, role = row
+        if role == "employee":
+            return Employee(
+                user_id=user_id,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+            )
         return User(
             user_id=user_id,
             first_name=first_name,
