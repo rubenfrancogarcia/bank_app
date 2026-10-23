@@ -1,6 +1,7 @@
 """User models shared by customers and employees."""
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass
@@ -11,6 +12,7 @@ class User:
     last_name: str
     email: str | None = None
     user_id: int | None = None
+    role: Literal["customer", "employee"] = "customer"
 
     def __post_init__(self) -> None:
         """Check the user's name and email."""
@@ -18,6 +20,8 @@ class User:
         self.last_name = self.last_name.strip()
         if not self.first_name or not self.last_name:
             raise ValueError("First and last name are required.")
+        if self.role not in {"customer", "employee"}:
+            raise ValueError("User role must be customer or employee.")
         if self.email is not None:
             self.email = self.email.strip()
             if not self.email:
