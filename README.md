@@ -107,6 +107,6 @@ A successful project will:
 
 ## Deliverables
 
-1. A UML diagram of the classes.
+1. A UML diagram of the models in [`docs/models-uml.md`](./docs/models-uml.md).
 2. Code pushed to GitHub in the project structure outlined by the assignment,
    along with a Markdown README explaining the design and how the program works.
